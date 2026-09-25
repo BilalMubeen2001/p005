@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 /**
  * Step 2. Patient details and the doctor's own words.
@@ -8,8 +8,22 @@ import React from 'react';
  * answer, so the doctor should be able to skip straight past this.
  */
 export default function Intake({ session, onChange, onBack, onNext }) {
+  const [findingsError, setFindingsError] = useState('');
   const p = session.patient;
   const set = (key, value) => onChange({ ...session, patient: { ...p, [key]: value } });
+
+  function submit(e) {
+    e.preventDefault();
+
+    if (!session.findings.trim()) {
+      setFindingsError('Enter at least one finding before continuing.');
+      document.getElementById('find')?.focus();
+      return;
+    }
+
+    setFindingsError('');
+    onNext();
+  }
 
   return (
     <main className="wrap">
@@ -18,7 +32,7 @@ export default function Intake({ session, onChange, onBack, onNext }) {
         Fill in what you have. Anything you leave blank, the assistant will ask about.
       </p>
 
-      <div className="stack">
+      <form className="stack" onSubmit={submit} noValidate>
         <div className="grid">
           <div className="field">
             <label htmlFor="name">Patient name</label>
@@ -74,21 +88,38 @@ export default function Intake({ session, onChange, onBack, onNext }) {
           <textarea
             id="find"
             className="textarea"
+            required
+            aria-invalid={Boolean(findingsError)}
+            aria-describedby={findingsError ? 'find-error find-help' : 'find-help'}
             placeholder="A few words is enough. e.g. small bleed rt frontal"
             value={session.findings}
-            onChange={(e) => onChange({ ...session, findings: e.target.value })}
+            onChange={(e) => {
+              const findings = e.target.value;
+              onChange({ ...session, findings });
+              if (findings.trim()) setFindingsError('');
+            }}
+            onBlur={() => {
+              if (!session.findings.trim()) {
+                setFindingsError('Enter at least one finding before continuing.');
+              }
+            }}
           />
-          <span className="tiny faint">
+          {findingsError ? (
+            <span id="find-error" className="field-error" role="alert">
+              {findingsError}
+            </span>
+          ) : null}
+          <span id="find-help" className="tiny faint">
             Shorthand is fine. rt, lt, r/o, SOL, NAD and the usual abbreviations are expanded for you.
           </span>
         </div>
 
         <div className="row" style={{ marginTop: 6 }}>
-          <button className="btn btn-ghost" onClick={onBack}>Back</button>
+          <button type="button" className="btn btn-ghost" onClick={onBack}>Back</button>
           <span className="spacer" />
-          <button className="btn btn-primary" onClick={onNext}>Continue</button>
+          <button type="submit" className="btn btn-primary">Continue</button>
         </div>
-      </div>
+      </form>
     </main>
   );
 }
